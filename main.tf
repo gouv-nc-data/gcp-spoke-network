@@ -6,7 +6,7 @@ locals {
 # vpc network
 ####
 module "vpc" {
-  source     = "git::https://github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/net-vpc?ref=v26.0.0"
+  source     = "git::https://github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/net-vpc?ref=v31.1.0"
   project_id = var.project_id
   name       = "vpc-${var.project_id}"
   subnets = [
@@ -23,7 +23,7 @@ module "vpc" {
 # Spoke network
 ####
 module "hub-to-spoke-peering" {
-  source        = "git::https://github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/net-vpc-peering?ref=v26.0.0"
+  source        = "git::https://github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/net-vpc-peering?ref=v31.1.0"
   local_network = module.vpc.self_link
   peer_network  = local.vpc-spoke-link
   routes_config = {
