@@ -39,7 +39,7 @@ module "vpc" {
   # Subnet NAT: Pool d'IPs pour Hybrid NAT (pas de ressources dedans)
   subnets_private_nat = var.subnet_onprem_4_gke != "" ? [
     {
-      ip_cidr_range = var.subnet_nat_range
+      ip_cidr_range = var.subnet_onprem_4_gke
       name          = "subnet-nat-hybrid"
       region        = var.region
     }
