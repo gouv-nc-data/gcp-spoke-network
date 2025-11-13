@@ -46,11 +46,11 @@ variable "subnet_onprem_4_gke" {
 variable "enable_gke_network" {
   description = "Activer les subnets GKE avec plages secondaires."
   type        = bool
-  default     = false 
+  default     = false
 }
 
 variable "enable_internet_gke" {
   description = "NAT interne pour accès Internet depuis les pods/resources."
   type        = bool
-  default     = true 
+  default     = true
 }

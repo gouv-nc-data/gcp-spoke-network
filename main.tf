@@ -18,11 +18,11 @@ module "vpc" {
         name          = "subnet-gke"
         region        = var.region
         secondary_ip_ranges = {
-          "pods-range" = { 
-            ip_cidr_range = var.subnet_gke_pods_range 
+          "pods-range" = {
+            ip_cidr_range = var.subnet_gke_pods_range
           }
-          "services-range" = { 
-            ip_cidr_range = var.subnet_gke_services_range 
+          "services-range" = {
+            ip_cidr_range = var.subnet_gke_services_range
           }
         }
       }
@@ -50,8 +50,8 @@ module "vpc" {
 # Cloud Router pour NAT Internet (public)
 ####
 resource "google_compute_router" "nat_router_public" {
-  count   = var.enable_gke_network && var.enable_internet_gke ? 1 : 0
-  
+  count = var.enable_gke_network && var.enable_internet_gke ? 1 : 0
+
   name    = "router-nat-public-${var.region}"
   region  = var.region
   project = var.project_id
@@ -62,7 +62,7 @@ resource "google_compute_router" "nat_router_public" {
 # Public NAT pour accès Internet depuis les pods/resources
 ####
 resource "google_compute_router_nat" "nat_internet" {
-  count  = var.enable_gke_network && var.enable_internet_gke ? 1 : 0
+  count = var.enable_gke_network && var.enable_internet_gke ? 1 : 0
 
   name    = "nat-public-internet"
   project = var.project_id
@@ -85,8 +85,8 @@ resource "google_compute_router_nat" "nat_internet" {
 # Note: Le routeur pour Hybrid NAT doit être dédié (pas d'autre NAT dessus)
 ####
 resource "google_compute_router" "nat_router_hybrid" {
-  count   = var.subnet_onprem_4_gke != "" ? 1 : 0
-  
+  count = var.subnet_onprem_4_gke != "" ? 1 : 0
+
   name    = "router-nat-hybrid-${var.region}"
   region  = var.region
   project = var.project_id
@@ -98,7 +98,7 @@ resource "google_compute_router" "nat_router_hybrid" {
 # Utilise les IPs du subnet PRIVATE_NAT (/28) autorisées on-premise
 ####
 resource "google_compute_router_nat" "nat_hybrid" {
-  count  = var.subnet_onprem_4_gke != "" ? 1 : 0
+  count = var.subnet_onprem_4_gke != "" ? 1 : 0
 
   name    = "nat-hybrid-onprem"
   project = var.project_id
