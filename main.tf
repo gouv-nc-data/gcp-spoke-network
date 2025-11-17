@@ -74,7 +74,7 @@ resource "google_compute_router_nat" "nat_hybrid" {
     description = "NAT vers on-premise via VPN"
     match       = "nexthop.is_hybrid"
     action {
-      source_nat_active_ranges = [module.vpc.subnets_private_nat[0].name]
+      source_nat_active_ranges = [values(module.vpc.subnets_private_nat)[0].name]
     }
   }
 }
