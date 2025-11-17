@@ -10,31 +10,14 @@ module "vpc" {
   project_id = var.project_id
   name       = "vpc-${var.project_id}"
 
-  # Subnet A: Pour GKE (Pods, Services, Nœuds)
-  subnets = concat(
-    var.enable_gke_network ? [
-      {
-        ip_cidr_range = var.subnet_gke_primary_range
-        name          = "subnet-gke"
-        region        = var.region
-        secondary_ip_ranges = {
-          "pods-range" = {
-            ip_cidr_range = var.subnet_gke_pods_range
-          }
-          "services-range" = {
-            ip_cidr_range = var.subnet_gke_services_range
-          }
-        }
-      }
-    ] : [],
-    var.subnet_onprem_4_resources != "" ? [
-      {
-        ip_cidr_range = var.subnet_onprem_4_resources
-        name          = "subnet-onprem-resources"
-        region        = var.region
-      }
-    ] : []
-  )
+  # Subnet pour les ressources qui doivent accéder à l'on-premise (Dataproc, VMs, etc.)
+  subnets = var.subnet_onprem_4_resources != "" ? [
+    {
+      ip_cidr_range = var.subnet_onprem_4_resources
+      name          = "subnet-onprem-resources"
+      region        = var.region
+    }
+  ] : []
 
   # Subnet NAT: Pool d'IPs pour Hybrid NAT (pas de ressources dedans)
   subnets_private_nat = var.subnet_onprem_4_gke != "" ? [
@@ -47,45 +30,11 @@ module "vpc" {
 }
 
 ####
-# Cloud Router pour NAT Internet (public)
-####
-resource "google_compute_router" "nat_router_public" {
-  count = var.enable_gke_network && var.enable_internet_gke ? 1 : 0
-
-  name    = "router-nat-public-${var.region}"
-  region  = var.region
-  project = var.project_id
-  network = module.vpc.name
-}
-
-####
-# Public NAT pour accès Internet depuis les pods/resources
-####
-resource "google_compute_router_nat" "nat_internet" {
-  count = var.enable_gke_network && var.enable_internet_gke ? 1 : 0
-
-  name    = "nat-public-internet"
-  project = var.project_id
-  region  = var.region
-  router  = google_compute_router.nat_router_public[0].name
-
-  # NAT public pour l'accès Internet
-  nat_ip_allocate_option             = "AUTO_ONLY"
-  source_subnetwork_ip_ranges_to_nat = "LIST_OF_SUBNETWORKS"
-
-  # Natter le trafic depuis le subnet GKE vers Internet
-  subnetwork {
-    name                    = module.vpc.subnet_self_links["${var.region}/subnet-gke"]
-    source_ip_ranges_to_nat = ["ALL_IP_RANGES"]
-  }
-}
-
-####
 # Cloud Router pour Hybrid NAT (accès on-premise via VPN)
 # Note: Le routeur pour Hybrid NAT doit être dédié (pas d'autre NAT dessus)
 ####
 resource "google_compute_router" "nat_router_hybrid" {
-  count = var.subnet_onprem_4_gke != "" ? 1 : 0
+  count = var.subnet_onprem_4_gke != "" && var.gke_subnet_self_link != "" ? 1 : 0
 
   name    = "router-nat-hybrid-${var.region}"
   region  = var.region
@@ -96,9 +45,10 @@ resource "google_compute_router" "nat_router_hybrid" {
 ####
 # Hybrid NAT pour accès on-premise via VPN/Interconnect
 # Utilise les IPs du subnet PRIVATE_NAT (/28) autorisées on-premise
+# S'applique au subnet GKE fourni en input (géré par le module GKE)
 ####
 resource "google_compute_router_nat" "nat_hybrid" {
-  count = var.subnet_onprem_4_gke != "" ? 1 : 0
+  count = var.subnet_onprem_4_gke != "" && var.gke_subnet_self_link != "" ? 1 : 0
 
   name    = "nat-hybrid-onprem"
   project = var.project_id
@@ -112,12 +62,10 @@ resource "google_compute_router_nat" "nat_hybrid" {
   source_subnetwork_ip_ranges_to_nat = "LIST_OF_SUBNETWORKS"
 
   # Subnet source (GKE pods qui doivent accéder on-premise)
-  dynamic "subnetwork" {
-    for_each = var.enable_gke_network ? [1] : []
-    content {
-      name                    = module.vpc.subnet_self_links["${var.region}/subnet-gke"]
-      source_ip_ranges_to_nat = ["ALL_IP_RANGES"]
-    }
+  # Le subnet GKE est fourni en input depuis le module GKE
+  subnetwork {
+    name                    = var.gke_subnet_self_link
+    source_ip_ranges_to_nat = ["ALL_IP_RANGES"]
   }
 
   # Règle NAT pour le trafic hybride (vers VPN/Interconnect)
@@ -165,13 +113,9 @@ resource "google_compute_firewall" "default-allow-internal" {
 
   direction = "INGRESS"
 
-  # Autoriser le trafic depuis les plages internes
+  # Autoriser le trafic depuis les plages internes (GKE + ressources on-premise)
   source_ranges = concat(
-    var.enable_gke_network ? [
-      var.subnet_gke_primary_range,
-      var.subnet_gke_pods_range,
-      var.subnet_gke_services_range
-    ] : [],
+    var.gke_ip_ranges,
     var.subnet_onprem_4_resources != "" ? [var.subnet_onprem_4_resources] : []
   )
 }
