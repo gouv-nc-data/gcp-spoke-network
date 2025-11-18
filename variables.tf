@@ -19,15 +19,3 @@ variable "subnet_onprem_4_gke" {
   type        = string
   default     = ""
 }
-
-variable "gke_subnet_self_link" {
-  description = "Self link du subnet GKE (géré par le module GKE) sur lequel appliquer le Hybrid NAT."
-  type        = string
-  default     = ""
-}
-
-variable "gke_ip_ranges" {
-  description = "Plages IP GKE à autoriser dans le firewall : [primary_range, pods_range, services_range]"
-  type        = list(string)
-  default     = []
-}
