@@ -11,31 +11,14 @@ module "vpc" {
   name       = "vpc-${var.project_id}"
 
   # Subnet pour les ressources qui doivent accéder à l'on-premise (Dataproc, VMs, etc.)
-  subnets = var.subnet_onprem_4_resources != "" ? [
+  subnets = [
     {
-      ip_cidr_range = var.subnet_onprem_4_resources
-      name          = "subnet-onprem-resources"
+      ip_cidr_range = var.subnet
+      name          = var.subnet_name
       region        = var.region
     }
-  ] : []
+  ]
 
-  # Subnet NAT: Pool d'IPs pour Hybrid NAT (pas de ressources dedans)
-  subnets_private_nat = var.subnet_onprem_4_gke != "" ? [
-    {
-      ip_cidr_range = var.subnet_onprem_4_gke
-      name          = "subnet-nat-hybrid"
-      region        = var.region
-    }
-  ] : []
-}
-
-resource "google_compute_router" "nat_router_hybrid" {
-  count = var.subnet_onprem_4_gke != "" ? 1 : 0
-
-  name    = "router-nat-hybrid-${var.region}"
-  region  = var.region
-  project = var.project_id
-  network = module.vpc.name
 }
 
 
@@ -53,7 +36,6 @@ module "hub-to-spoke-peering" {
 }
 
 resource "google_compute_firewall" "default-allow-internal" {
-  count = var.subnet_onprem_4_resources != "" ? 1 : 0
 
   name    = "default-allow-internal"
   project = var.project_id
@@ -76,5 +58,5 @@ resource "google_compute_firewall" "default-allow-internal" {
   direction = "INGRESS"
 
   # Autoriser le trafic depuis les ressources on-premise uniquement.
-  source_ranges = [var.subnet_onprem_4_resources]
+  source_ranges = [var.subnet]
 }
