@@ -10,5 +10,12 @@ variable "region" {
 
 variable "subnet" {
   type        = string
-  description = "subnet dans lequel s'executent les data proc"
+  description = "Plage IP pour les ressources (Dataproc, VMs) qui accèdent on-premise. IPs autorisées côté on-premise."
+  default     = ""
+}
+
+variable "subnet_name" {
+  type        = string
+  description = "Nom du subnet"
+  default     = "subnet-for-vpn"
 }
